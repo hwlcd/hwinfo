@@ -9,7 +9,6 @@
 #include <IOKit/storage/IOMedia.h>
 
 #include <expected>
-#include <memory>
 #include <string_view>
 #include <vector>
 

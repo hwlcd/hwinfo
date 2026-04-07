@@ -3,7 +3,6 @@
 
 #if defined(__APPLE__) && defined(__arm64__)
 
-#include <iostream>
 #include <ranges>
 
 #include "hwinfo/detail/util.hpp"
@@ -50,8 +49,7 @@ auto hwinfo::sample_diff(BeginIt&& begin, EndIt&& end) -> hwlcd::hwinfo::sample_
         std::views::transform([](const hwlcd::hwinfo::sample& s) -> const hwlcd::hwinfo::detail::osx::smc_sample& {
           return s.smc_sample_;
         });
-    auto smc_sample_diff =
-        smc_reader_.sample_diff(std::ranges::begin(smc_samples_view), std::ranges::end(smc_samples_view));
+    auto smc_sample_diff = smc_reader_.sample_diff(smc_samples_view.begin(), smc_samples_view.end());
     diff.temperatures = std::move(smc_sample_diff.temperatures);
     diff.fan_speeds = std::move(smc_sample_diff.fan_speeds);
     // Cpu temperature
@@ -60,36 +58,33 @@ auto hwinfo::sample_diff(BeginIt&& begin, EndIt&& end) -> hwlcd::hwinfo::sample_
           return metric.device == device_type::e_cpu_core || metric.device == device_type::p_cpu_core ||
                  metric.device == device_type::s_cpu_core;
         });
-    diff.cpu_temperature =
-        detail::stat_values<float>(std::ranges::begin(cpu_temperature_view), std::ranges::end(cpu_temperature_view));
+    diff.cpu_temperature = detail::stat_values<float>(cpu_temperature_view.begin(), cpu_temperature_view.end());
     // Gpu temperature
     auto gpu_temperature_view =
         diff.temperatures | std::views::filter([](const device_sequential_metric<float>& metric) {
           return metric.device == device_type::gpu_core;
         });
-    diff.gpu_temperature =
-        detail::stat_values<float>(std::ranges::begin(gpu_temperature_view), std::ranges::end(gpu_temperature_view));
+    diff.gpu_temperature = detail::stat_values<float>(gpu_temperature_view.begin(), gpu_temperature_view.end());
     // Memory temperature
     auto memory_temperature_view =
         diff.temperatures | std::views::filter([](const device_sequential_metric<float>& metric) {
           return metric.device == device_type::dram;
         });
-    diff.memory_temperature = detail::stat_values<float>(std::ranges::begin(memory_temperature_view),
-                                                         std::ranges::end(memory_temperature_view));
+    diff.memory_temperature =
+        detail::stat_values<float>(memory_temperature_view.begin(), memory_temperature_view.end());
     // Disk temperature
     auto disk_temperature_view =
         diff.temperatures | std::views::filter([](const device_sequential_metric<float>& metric) {
           return metric.device == device_type::nand;
         });
-    diff.disk_temperature =
-        detail::stat_values<float>(std::ranges::begin(disk_temperature_view), std::ranges::end(disk_temperature_view));
+    diff.disk_temperature = detail::stat_values<float>(disk_temperature_view.begin(), disk_temperature_view.end());
     // Battery temperature
     auto battery_temperature_view =
         diff.temperatures | std::views::filter([](const device_sequential_metric<float>& metric) {
           return metric.device == device_type::battery;
         });
-    diff.battery_temperature = detail::stat_values<float>(std::ranges::begin(battery_temperature_view),
-                                                          std::ranges::end(battery_temperature_view));
+    diff.battery_temperature =
+        detail::stat_values<float>(battery_temperature_view.begin(), battery_temperature_view.end());
     // Fan speed
     diff.fan_speed = detail::stat_values<float>(diff.fan_speeds.begin(), diff.fan_speeds.end());
 
@@ -121,20 +116,17 @@ auto hwinfo::sample_diff(BeginIt&& begin, EndIt&& end) -> hwlcd::hwinfo::sample_
         diff.cpu_core_freqs | std::views::filter([](const device_sequential_metric<float>& metric) {
           return metric.device == device_type::s_cpu_core;
         });
-    if (std::ranges::begin(e_cpu_core_freqs_view) != std::ranges::end(e_cpu_core_freqs_view)) {
-      diff.cpu_core_type_freq.emplace(device_type::e_cpu,
-                                      detail::stat_values<float>(std::ranges::begin(e_cpu_core_freqs_view),
-                                                                 std::ranges::end(e_cpu_core_freqs_view)));
+    if (e_cpu_core_freqs_view.begin() != e_cpu_core_freqs_view.end()) {
+      diff.cpu_core_type_freq.emplace(
+          device_type::e_cpu, detail::stat_values<float>(e_cpu_core_freqs_view.begin(), e_cpu_core_freqs_view.end()));
     }
-    if (std::ranges::begin(p_cpu_core_freqs_view) != std::ranges::end(p_cpu_core_freqs_view)) {
-      diff.cpu_core_type_freq.emplace(device_type::p_cpu,
-                                      detail::stat_values<float>(std::ranges::begin(p_cpu_core_freqs_view),
-                                                                 std::ranges::end(p_cpu_core_freqs_view)));
+    if (p_cpu_core_freqs_view.begin() != p_cpu_core_freqs_view.end()) {
+      diff.cpu_core_type_freq.emplace(
+          device_type::p_cpu, detail::stat_values<float>(p_cpu_core_freqs_view.begin(), p_cpu_core_freqs_view.end()));
     }
-    if (std::ranges::begin(s_cpu_core_freqs_view) != std::ranges::end(s_cpu_core_freqs_view)) {
-      diff.cpu_core_type_freq.emplace(device_type::s_cpu,
-                                      detail::stat_values<float>(std::ranges::begin(s_cpu_core_freqs_view),
-                                                                 std::ranges::end(s_cpu_core_freqs_view)));
+    if (s_cpu_core_freqs_view.begin() != s_cpu_core_freqs_view.end()) {
+      diff.cpu_core_type_freq.emplace(
+          device_type::s_cpu, detail::stat_values<float>(s_cpu_core_freqs_view.begin(), s_cpu_core_freqs_view.end()));
     }
 
     // Errors
@@ -175,14 +167,19 @@ auto hwinfo::sample_diff(BeginIt&& begin, EndIt&& end) -> hwlcd::hwinfo::sample_
     auto total_count = static_cast<float>(memory_info_diff.stats.wire_count + memory_info_diff.stats.active_count +
                                           memory_info_diff.stats.inactive_count + memory_info_diff.stats.free_count +
                                           memory_info_diff.stats.compressor_page_count);
-    diff.memory_usage =
-        static_cast<float>(memory_info_diff.stats.wire_count + memory_info_diff.stats.active_count) / total_count;
-    diff.memory_available_percentage =
-        static_cast<float>(memory_info_diff.stats.free_count + memory_info_diff.stats.inactive_count +
-                           memory_info_diff.stats.compressor_page_count) /
-        total_count;
-    diff.memory_free_percentage = static_cast<float>(memory_info_diff.stats.free_count) / total_count;
-
+    if (total_count > 0) {
+      diff.memory_usage =
+          static_cast<float>(memory_info_diff.stats.wire_count + memory_info_diff.stats.active_count) / total_count;
+      diff.memory_available_percentage =
+          static_cast<float>(memory_info_diff.stats.free_count + memory_info_diff.stats.inactive_count +
+                             memory_info_diff.stats.compressor_page_count) /
+          total_count;
+      diff.memory_free_percentage = static_cast<float>(memory_info_diff.stats.free_count) / total_count;
+    } else {
+      diff.memory_usage = 0;
+      diff.memory_available_percentage = 0;
+      diff.memory_free_percentage = 0;
+    }
     // Errors
     if (memory_info_diff.errors.size() > 0) {
       diff.errors.insert(diff.errors.end(), memory_info_diff.errors.begin(), memory_info_diff.errors.end());

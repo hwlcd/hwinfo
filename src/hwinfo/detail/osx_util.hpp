@@ -9,7 +9,6 @@
 #include <sys/sysctl.h>
 #include <sys/types.h>
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>

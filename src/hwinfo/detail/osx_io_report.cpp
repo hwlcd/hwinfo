@@ -11,13 +11,13 @@
 
 #include <array>
 #include <charconv>
-#include <iostream>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <vector>
 
 #include "hwinfo/detail/osx_util.hpp"
+#include "hwinfo/detail/util.hpp"
 
 //
 // The following c apis are undocumented private osx apis which I copied from the above source file
@@ -47,7 +47,6 @@ using namespace hwlcd::hwinfo::detail::osx;
 
 static constexpr std::array<std::tuple<std::string_view, std::string_view>, 3> report_channel_names{{
     {"Energy Model", ""},
-    //{"CPU Stats", "CPU Complex Performance States"},
     {"CPU Stats", "CPU Core Performance States"},
     {"GPU Stats", "GPU Performance States"},
 }};
@@ -177,8 +176,7 @@ auto io_report::sample_diff(const io_report_sample& start, const io_report_sampl
     // No diff object
     return diff;
   }
-
-  // Decode diff
+  auto _0 = make_scope_guard([&ref]() { CFRelease(ref); });  // Defer release ref
 
   // Get items & size
   auto items = (CFArrayRef)cf_get_dict_value(ref, "IOReportChannels");

@@ -54,6 +54,7 @@ class sampler {
  private:
   hwlcd::hwinfo::hwinfo info_;
   std::deque<hwlcd::hwinfo::sample> sample_queue_;
+  size_t pop_times_ = 0;
 };
 
 //
@@ -305,8 +306,13 @@ void sampler::sample(F&& f) {
   if (sample_queue_.size() == 6) {
     // Calculate sample diff
     f(info_.sample_diff(sample_queue_.begin(), sample_queue_.end()));
+    // Pop front
     for (size_t i = 0; i < 5; ++i) {
       sample_queue_.pop_front();
+    }
+    if (++pop_times_ > 32) {
+      pop_times_ = 0;
+      sample_queue_.shrink_to_fit();
     }
   }
 }
@@ -340,6 +346,7 @@ void terminal_output::run() {
   // Main loop
   size_t current_number = 0;
   size_t sleep_times = 0;
+  size_t pop_times = 0;
   while (!stop) {
     auto ch = wgetch(stdscr);
     if (ch == ERR) {
@@ -349,8 +356,12 @@ void terminal_output::run() {
         get_sampler().sample([&](sample_diff&& diff) {
           ++current_number;
           diff_queue_.emplace_back(std::move(diff));
-          if (diff_queue_.size() > 1024) {
+          if (diff_queue_.size() > 384) {
             diff_queue_.pop_front();
+            if (++pop_times > 128) {
+              pop_times = 0;
+              diff_queue_.shrink_to_fit();
+            }
           }
           // Draw
           draw(false);
