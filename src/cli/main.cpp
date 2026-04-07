@@ -858,8 +858,7 @@ void terminal_output::draw_cpu_usage_window(WINDOW* p_win) {
   wclear(p_win);
 
   const auto& latest_diff = diff_queue_.back();
-  draw_window_border(p_win, std::format("CPU Usage @ Freq {:.2f}mhz Temp {:.2f}C", latest_diff.cpu_freq.avg,
-                                        latest_diff.cpu_temperature.avg));
+  draw_window_border(p_win, std::format("CPU Usage @ {:.2f}", latest_diff.cpu_usage));
 
   std::vector<float> values;
   for (const auto& diff : diff_queue_) {
@@ -875,8 +874,7 @@ void terminal_output::draw_cpu_freq_window(WINDOW* p_win) {
   wclear(p_win);
 
   const auto& latest_diff = diff_queue_.back();
-  draw_window_border(p_win, std::format("CPU Freq (mhz) @ Usage {:.2f}% Temp {:.2f}C", latest_diff.cpu_usage * 100,
-                                        latest_diff.gpu_temperature.avg));
+  draw_window_border(p_win, std::format("CPU Freq (mhz) @ {:.2f}", latest_diff.cpu_freq.avg));
 
   float min_freq = 0, max_freq = 0;
   for (const auto& diff : diff_queue_) {
@@ -903,7 +901,7 @@ void terminal_output::draw_gpu_freq_window(WINDOW* p_win) {
   wclear(p_win);
 
   const auto& latest_diff = diff_queue_.back();
-  draw_window_border(p_win, std::format("GPU Freq (mhz) @ Temp {:.2f}C", latest_diff.gpu_temperature.avg));
+  draw_window_border(p_win, std::format("GPU Freq (mhz) @ {:.2f}", latest_diff.gpu_freq));
 
   float min_freq = 0, max_freq = 0;
   for (const auto& diff : diff_queue_) {
@@ -930,7 +928,7 @@ void terminal_output::draw_memory_usage_window(WINDOW* p_win) {
   wclear(p_win);
 
   const auto& latest_diff = diff_queue_.back();
-  draw_window_border(p_win, std::format("Memory Usage @ Temp {:.2f}C", latest_diff.memory_temperature.avg));
+  draw_window_border(p_win, std::format("Memory Usage @ {:.2f}", latest_diff.memory_usage));
 
   std::vector<float> values;
   for (const auto& diff : diff_queue_) {
@@ -946,7 +944,10 @@ void terminal_output::draw_disk_io_read_rate_window(WINDOW* p_win) {
   }
   wclear(p_win);
 
-  draw_window_border(p_win, "Total Disk I/O Read Rate (kb/s)");
+  const auto& latest_diff = diff_queue_.back();
+  draw_window_border(p_win, std::format("Total Disk I/O Read Rate (kb/s) @ {:.2f}",
+                                        latest_diff.total_disk_io_rate.read_bytes / 1000.0));
+
   std::vector<float> values;
   float min_value = 0, max_value = 0;
   const auto view =
@@ -961,7 +962,10 @@ void terminal_output::draw_disk_io_write_rate_window(WINDOW* p_win) {
   }
   wclear(p_win);
 
-  draw_window_border(p_win, "Total Disk I/O Write Rate (kb/s)");
+  const auto& latest_diff = diff_queue_.back();
+  draw_window_border(p_win, std::format("Total Disk I/O Write Rate (kb/s) @ {:.2f}",
+                                        latest_diff.total_disk_io_rate.write_bytes / 1000.0));
+
   std::vector<float> values;
   float min_value = 0, max_value = 0;
   const auto view =
@@ -976,7 +980,10 @@ void terminal_output::draw_network_io_read_rate_window(WINDOW* p_win) {
   }
   wclear(p_win);
 
-  draw_window_border(p_win, "Total Network I/O Read Rate (kb/s)");
+  const auto& latest_diff = diff_queue_.back();
+  draw_window_border(p_win, std::format("Total Network I/O Read Rate (kb/s) @ {:.2f}",
+                                        latest_diff.total_net_io_rate.read_bytes / 1000.0));
+
   std::vector<float> values;
   float min_value = 0, max_value = 0;
   const auto view =
@@ -991,7 +998,10 @@ void terminal_output::draw_network_io_write_rate_window(WINDOW* p_win) {
   }
   wclear(p_win);
 
-  draw_window_border(p_win, "Total Network I/O Write Rate (kb/s)");
+  const auto& latest_diff = diff_queue_.back();
+  draw_window_border(p_win, std::format("Total Network I/O Write Rate (kb/s) @ {:.2f}",
+                                        latest_diff.total_net_io_rate.write_bytes / 1000.0));
+
   std::vector<float> values;
   float min_value = 0, max_value = 0;
   const auto view =
@@ -1006,7 +1016,9 @@ void terminal_output::draw_cpu_temperature_window(WINDOW* p_win) {
   }
   wclear(p_win);
 
-  draw_window_border(p_win, "CPU Temperature (C)");
+  const auto& latest_diff = diff_queue_.back();
+  draw_window_border(p_win, std::format("CPU Temperature (C) @ {:.2f}", latest_diff.cpu_temperature.avg));
+
   std::vector<float> values;
   float min_value = 0, max_value = 0;
   const auto view = diff_queue_ | std::views::transform([](auto&& diff) { return diff.cpu_temperature.avg; });
@@ -1020,7 +1032,9 @@ void terminal_output::draw_gpu_temperature_window(WINDOW* p_win) {
   }
   wclear(p_win);
 
-  draw_window_border(p_win, "GPU Temperature (C)");
+  const auto& latest_diff = diff_queue_.back();
+  draw_window_border(p_win, std::format("GPU Temperature (C) @ {:.2f}", latest_diff.gpu_temperature.avg));
+
   std::vector<float> values;
   float min_value = 0, max_value = 0;
   const auto view = diff_queue_ | std::views::transform([](auto&& diff) { return diff.gpu_temperature.avg; });
@@ -1034,7 +1048,9 @@ void terminal_output::draw_memory_temperature_window(WINDOW* p_win) {
   }
   wclear(p_win);
 
-  draw_window_border(p_win, "Memory Temperature (C)");
+  const auto& latest_diff = diff_queue_.back();
+  draw_window_border(p_win, std::format("Memory Temperature (C) @ {:.2f}", latest_diff.memory_temperature.avg));
+
   std::vector<float> values;
   float min_value = 0, max_value = 0;
   const auto view = diff_queue_ | std::views::transform([](auto&& diff) { return diff.memory_temperature.avg; });
@@ -1048,7 +1064,9 @@ void terminal_output::draw_disk_temperature_window(WINDOW* p_win) {
   }
   wclear(p_win);
 
-  draw_window_border(p_win, "Disk Temperature (C)");
+  const auto& latest_diff = diff_queue_.back();
+  draw_window_border(p_win, std::format("Disk Temperature (C) @ {:.2f}", latest_diff.disk_temperature.avg));
+
   std::vector<float> values;
   float min_value = 0, max_value = 0;
   const auto view = diff_queue_ | std::views::transform([](auto&& diff) { return diff.disk_temperature.avg; });
@@ -1062,7 +1080,9 @@ void terminal_output::draw_battery_temperature_window(WINDOW* p_win) {
   }
   wclear(p_win);
 
-  draw_window_border(p_win, "Battery Temperature (C)");
+  const auto& latest_diff = diff_queue_.back();
+  draw_window_border(p_win, std::format("Battery Temperature (C) @ {:.2f}", latest_diff.battery_temperature.avg));
+
   std::vector<float> values;
   float min_value = 0, max_value = 0;
   const auto view = diff_queue_ | std::views::transform([](auto&& diff) { return diff.battery_temperature.avg; });
@@ -1076,7 +1096,9 @@ void terminal_output::draw_fan_speed_window(WINDOW* p_win) {
   }
   wclear(p_win);
 
-  draw_window_border(p_win, "Fan Speed (RPM)");
+  const auto& latest_diff = diff_queue_.back();
+  draw_window_border(p_win, std::format("Fan Speed (RPM) @ {:.2f}", latest_diff.fan_speed.avg));
+
   std::vector<float> values;
   float min_value = 0, max_value = 0;
   const auto view = diff_queue_ | std::views::transform([](auto&& diff) { return diff.fan_speed.avg; });

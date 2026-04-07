@@ -88,26 +88,24 @@ struct smc_data_type_traits<smc_data_type_flt> {
     char b[4];
   };
 
-  static auto decode(smc_bytes data, size_t size, float* p_out) -> std::error_code {
+  static auto decode(smc_bytes data, size_t size, float& out) -> std::error_code {
     if (size != 4) {
       return std::make_error_code(std::errc::invalid_argument);
     }
-    if (p_out) {
-      smc_float_union flt;
-      flt.b[0] = data[0];
-      flt.b[1] = data[1];
-      flt.b[2] = data[2];
-      flt.b[3] = data[3];
-      *p_out = flt.f;
-    }
+    smc_float_union flt;
+    flt.b[0] = data[0];
+    flt.b[1] = data[1];
+    flt.b[2] = data[2];
+    flt.b[3] = data[3];
+    out = flt.f;
     return std::error_code();
   }
 };
 
 template <uint32_t smc_data_type>
-auto decode_smc_data(smc_bytes data, size_t size, typename smc_data_type_traits<smc_data_type>::decoded_type* p_out)
+auto decode_smc_data(smc_bytes data, size_t size, typename smc_data_type_traits<smc_data_type>::decoded_type& out)
     -> std::error_code {
-  return smc_data_type_traits<smc_data_type>::decode(data, size, p_out);
+  return smc_data_type_traits<smc_data_type>::decode(data, size, out);
 }
 
 auto read_smc_key_info(io_connect_t conn, uint32_t key, uint32_t* p_out_data_size, uint32_t* p_out_data_type)
@@ -133,11 +131,7 @@ auto read_smc_key_info(io_connect_t conn, uint32_t key, uint32_t* p_out_data_siz
 
 template <uint32_t T>
 auto read_smc_data(io_connect_t conn, uint32_t key, uint32_t data_size,
-                   typename smc_data_type_traits<T>::decoded_type* p_out_data) -> std::error_code {
-  if (!p_out_data) {
-    return std::make_error_code(std::errc::no_buffer_space);
-  }
-
+                   typename smc_data_type_traits<T>::decoded_type& out) -> std::error_code {
   smc_data input_data = {.key = key, .key_info = {.data_size = data_size}, .cmd = smc_cmd_read_bytes};
   smc_data output_data = {};
   size_t input_data_size = sizeof(smc_data);
@@ -148,7 +142,7 @@ auto read_smc_data(io_connect_t conn, uint32_t key, uint32_t data_size,
     return std::make_error_code(std::errc::invalid_argument);
   }
 
-  return decode_smc_data<T>(output_data.data, data_size, p_out_data);
+  return decode_smc_data<T>(output_data.data, data_size, out);
 }
 
 /**
@@ -373,20 +367,20 @@ static constexpr std::array<known_key<sequential_metric<float>>, 10> known_fan_s
 // Ignore any errors since we can't handle them easily
 template <MetricType M, size_t KS, size_t BS>
 void read_known_keys_smc_data(io_connect_t conn, const std::array<known_key<M>, KS>& keys,
-                              const std::bitset<BS>& valid_keys, std::vector<M>* p_out_metrics) {
+                              const std::bitset<BS>& valid_keys, std::vector<M>& out_metrics) {
   for (size_t i = 0; i < keys.size() && i < BS; ++i) {
     const auto& key = keys[i];
     if (valid_keys.test(i)) {
       M metric(key.empty_metric);  // New metric
       switch (key.data_type) {
       case smc_data_type_flt:
-        read_smc_data<smc_data_type_flt>(conn, key.key, key.data_size, &metric.value);
+        read_smc_data<smc_data_type_flt>(conn, key.key, key.data_size, metric.value);
         break;
 
       default:
         // Do nothing
       }
-      p_out_metrics->emplace_back(std::move(metric));
+      out_metrics.emplace_back(std::move(metric));
     }
   }
 }
@@ -491,41 +485,39 @@ auto smc_reader::sample() -> smc_sample {
 
   if (sys_info_.cpu_brand() == cpu_brand::m1) {
     read_known_keys_smc_data(conn_, known_m1_cpu_core_temperature_keys, valid_cpu_core_temperature_keys_,
-                             &sample.temperatures);
+                             sample.temperatures);
     read_known_keys_smc_data(conn_, known_m1_gpu_core_temperature_keys, valid_gpu_core_temperature_keys_,
-                             &sample.temperatures);
-    read_known_keys_smc_data(conn_, known_m1_dram_temperature_keys, valid_dram_temperature_keys_, &sample.temperatures);
+                             sample.temperatures);
+    read_known_keys_smc_data(conn_, known_m1_dram_temperature_keys, valid_dram_temperature_keys_, sample.temperatures);
   } else if (sys_info_.cpu_brand() == cpu_brand::m2) {
     read_known_keys_smc_data(conn_, known_m2_cpu_core_temperature_keys, valid_cpu_core_temperature_keys_,
-                             &sample.temperatures);
+                             sample.temperatures);
     read_known_keys_smc_data(conn_, known_m2_gpu_core_temperature_keys, valid_gpu_core_temperature_keys_,
-                             &sample.temperatures);
-    read_known_keys_smc_data(conn_, known_m2_dram_temperature_keys, valid_dram_temperature_keys_, &sample.temperatures);
+                             sample.temperatures);
+    read_known_keys_smc_data(conn_, known_m2_dram_temperature_keys, valid_dram_temperature_keys_, sample.temperatures);
   } else if (sys_info_.cpu_brand() == cpu_brand::m3) {
     read_known_keys_smc_data(conn_, known_m3_cpu_core_temperature_keys, valid_cpu_core_temperature_keys_,
-                             &sample.temperatures);
+                             sample.temperatures);
     read_known_keys_smc_data(conn_, known_m3_gpu_core_temperature_keys, valid_gpu_core_temperature_keys_,
-                             &sample.temperatures);
-    read_known_keys_smc_data(conn_, known_m3_dram_temperature_keys, valid_dram_temperature_keys_, &sample.temperatures);
+                             sample.temperatures);
+    read_known_keys_smc_data(conn_, known_m3_dram_temperature_keys, valid_dram_temperature_keys_, sample.temperatures);
   } else if (sys_info_.cpu_brand() == cpu_brand::m4) {
     read_known_keys_smc_data(conn_, known_m4_cpu_core_temperature_keys, valid_cpu_core_temperature_keys_,
-                             &sample.temperatures);
+                             sample.temperatures);
     read_known_keys_smc_data(conn_, known_m4_gpu_core_temperature_keys, valid_gpu_core_temperature_keys_,
-                             &sample.temperatures);
-    read_known_keys_smc_data(conn_, known_m4_dram_temperature_keys, valid_dram_temperature_keys_, &sample.temperatures);
+                             sample.temperatures);
+    read_known_keys_smc_data(conn_, known_m4_dram_temperature_keys, valid_dram_temperature_keys_, sample.temperatures);
   } else if (sys_info_.cpu_brand() == cpu_brand::m5) {
     read_known_keys_smc_data(conn_, known_m5_cpu_core_temperature_keys, valid_cpu_core_temperature_keys_,
-                             &sample.temperatures);
+                             sample.temperatures);
     read_known_keys_smc_data(conn_, known_m5_gpu_core_temperature_keys, valid_gpu_core_temperature_keys_,
-                             &sample.temperatures);
-    read_known_keys_smc_data(conn_, known_m5_dram_temperature_keys, valid_dram_temperature_keys_, &sample.temperatures);
+                             sample.temperatures);
+    read_known_keys_smc_data(conn_, known_m5_dram_temperature_keys, valid_dram_temperature_keys_, sample.temperatures);
   }
 
-  read_known_keys_smc_data(conn_, known_storage_temperature_keys, valid_storage_temperature_keys_,
-                           &sample.temperatures);
-  read_known_keys_smc_data(conn_, known_battery_temperature_keys, valid_battery_temperature_keys_,
-                           &sample.temperatures);
-  read_known_keys_smc_data(conn_, known_fan_speed_keys, valid_fan_speed_keys_, &sample.fan_speeds);
+  read_known_keys_smc_data(conn_, known_storage_temperature_keys, valid_storage_temperature_keys_, sample.temperatures);
+  read_known_keys_smc_data(conn_, known_battery_temperature_keys, valid_battery_temperature_keys_, sample.temperatures);
+  read_known_keys_smc_data(conn_, known_fan_speed_keys, valid_fan_speed_keys_, sample.fan_speeds);
 
   return sample;
 }

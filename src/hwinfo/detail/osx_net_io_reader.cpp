@@ -20,7 +20,7 @@ using namespace hwlcd::hwinfo::detail;
 using namespace hwlcd::hwinfo::detail::osx;
 
 auto get_network_io_counters() -> std::expected<std::unordered_map<std::string, net_io_counter>, std::error_code> {
-  int mib[6] = {
+  std::array<int, 6> mib{
       CTL_NET,         // networking subsystem
       PF_ROUTE,        // type of information
       0,               // protocol (IPPROTO_xxx)
@@ -30,7 +30,7 @@ auto get_network_io_counters() -> std::expected<std::unordered_map<std::string, 
   };
 
   std::unordered_map<std::string, net_io_counter> counters;
-  auto ec = sysctl_dynamic_buffer<32 * 1024>(mib, 6, [&counters](const char* buffer, size_t size) -> std::error_code {
+  auto ec = sysctl_dynamic_buffer<32 * 1024>(mib, [&counters](const char* buffer, size_t size) -> std::error_code {
     const char* p_end = buffer + size;
     const char* p_read = buffer;
 

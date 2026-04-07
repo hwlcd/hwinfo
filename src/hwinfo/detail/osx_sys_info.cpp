@@ -145,10 +145,10 @@ auto sys_info::init() -> std::error_code {
   };
   std::error_code ec;
   // Get cpu core number
-  if (ec = sysctlbyname_scalar<size_t>("hw.perflevel1.physicalcpu", &e_cpu_core_num_); ec) {
+  if (ec = sysctlbyname_scalar<size_t>("hw.perflevel1.physicalcpu", e_cpu_core_num_); ec) {
     return ec;
   }
-  if (ec = sysctlbyname_scalar<size_t>("hw.perflevel0.physicalcpu", &p_cpu_core_num_); ec) {
+  if (ec = sysctlbyname_scalar<size_t>("hw.perflevel0.physicalcpu", p_cpu_core_num_); ec) {
     return ec;
   }
   // Get cpu / gpu dynamic frequency list
@@ -158,10 +158,10 @@ auto sys_info::init() -> std::error_code {
     return ec;
   }
   // Get memory info
-  if (ec = sysctlbyname_scalar<uint64_t>("hw.memsize", &memory_total_size_); ec) {
+  if (ec = sysctlbyname_scalar<uint64_t>("hw.memsize", memory_total_size_); ec) {
     return ec;
   }
-  if (ec = sysctlbyname_scalar<uint64_t>("vm.pagesize", &memory_page_size_); ec) {
+  if (ec = sysctlbyname_scalar<uint64_t>("vm.pagesize", memory_page_size_); ec) {
     return ec;
   }
 

@@ -1,6 +1,6 @@
 // hwinfo osx implementation
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && defined(__arm64__)
 
 #include "hwinfo/hwinfo.hpp"
 

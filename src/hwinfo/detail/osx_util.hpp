@@ -32,11 +32,12 @@ inline const auto& mach_category() {
 
 inline auto make_mach_error_code(kern_return_t ec) { return std::error_code(ec, mach_category()); }
 
-template <size_t S, typename F>
-auto sysctl_dynamic_buffer(int* mib, uint miblen, F&& f) -> std::error_code {
+template <size_t S, size_t MibSize, typename F>
+auto sysctl_dynamic_buffer(const std::array<int, MibSize>& mib, F&& f) -> std::error_code {
   int ec = 0;
   size_t needed_size = 0;
-  if (ec = sysctl(mib, miblen, NULL, &needed_size, NULL, 0); ec) {
+  uint miblen = mib.size();
+  if (ec = sysctl((int*)mib.data(), miblen, NULL, &needed_size, NULL, 0); ec) {
     return std::error_code(ec, std::system_category());
   }
   if (needed_size == 0) {
@@ -47,7 +48,7 @@ auto sysctl_dynamic_buffer(int* mib, uint miblen, F&& f) -> std::error_code {
   if (needed_size <= S) {
     // Use static buffer
     size_t buffer_len = S;
-    if (ec = sysctl(mib, miblen, static_buffer, &buffer_len, NULL, 0); ec) {
+    if (ec = sysctl((int*)mib.data(), miblen, static_buffer, &buffer_len, NULL, 0); ec) {
       return std::error_code(ec, std::system_category());
     }
     return f((const char*)static_buffer, needed_size);
@@ -55,7 +56,7 @@ auto sysctl_dynamic_buffer(int* mib, uint miblen, F&& f) -> std::error_code {
     // Use dynamic buffer
     std::unique_ptr<char[]> p_buffer(new char[needed_size]);
     size_t buffer_len = needed_size;
-    if (ec = sysctl(mib, miblen, p_buffer.get(), &buffer_len, NULL, 0); ec) {
+    if (ec = sysctl((int*)mib.data(), miblen, p_buffer.get(), &buffer_len, NULL, 0); ec) {
       return std::error_code(ec, std::system_category());
     }
     return f((const char*)p_buffer.get(), needed_size);
@@ -63,12 +64,9 @@ auto sysctl_dynamic_buffer(int* mib, uint miblen, F&& f) -> std::error_code {
 }
 
 template <typename T>
-auto sysctlbyname_scalar(std::string_view sv, T* out_value) -> std::error_code {
-  if (out_value == nullptr) {
-    return std::error_code();
-  }
+auto sysctlbyname_scalar(std::string_view sv, T& out_value) -> std::error_code {
   size_t buf_size = sizeof(T);
-  auto ec = sysctlbyname(sv.data(), out_value, &buf_size, NULL, 0);
+  auto ec = sysctlbyname(sv.data(), &out_value, &buf_size, NULL, 0);
   if (ec) {
     return std::error_code(ec, std::system_category());
   }
